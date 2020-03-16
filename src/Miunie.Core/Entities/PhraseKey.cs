@@ -59,6 +59,7 @@ namespace Miunie.Core.Entities
         HELP_EXAMPLE_TITLE,
         HELP_SUMMARY_EMPTY,
         HELP_SUMMARY_TITLE,
+        HELP_REQUIRES_ADMIN,
         GPL3_NOTICE
     }
 }

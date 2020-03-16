@@ -170,6 +170,10 @@ Just mess around with this, you'll figure it out eventually.</value>
     <value>**Examples**: </value>
     <comment>No formatting options.</comment>
   </data>
+  <data name="HELP_REQUIRES_ADMIN" xml:space="preserve">
+    <value>:warning: **This requires an administrator to execute.**</value>
+    <comment>No formatting options.</comment>
+  </data>
   <data name="HELP_SUMMARY_EMPTY" xml:space="preserve">
     <value>This is kind of difficult to explain...{{OR}}
 How am I supposed to put this into words?{{OR}}

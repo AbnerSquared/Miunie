@@ -154,6 +154,15 @@ namespace Miunie.Core {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to :warning: **This requires an administrator to execute.**.
+        /// </summary>
+        public static string HELP_REQUIRES_ADMIN {
+            get {
+                return ResourceManager.GetString("HELP_REQUIRES_ADMIN", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to This is kind of difficult to explain...{{OR}}
         ///How am I supposed to put this into words?{{OR}}
         ///It&apos;s a command, I think? Not sure..

@@ -13,6 +13,7 @@
 //  You should have received a copy of the GNU General Public License
 //  along with Miunie. If not, see <https://www.gnu.org/licenses/>.
 
+using Discord;
 using Discord.Commands;
 using Miunie.Core.Entities;
 using Miunie.Core.Providers;
@@ -84,7 +85,19 @@ namespace Miunie.Discord
             _ = content.Append(_lang.GetPhrase(PhraseKey.HELP_SUMMARY_TITLE.ToString()))
                 .AppendLine(summary)
                 .Append(_lang.GetPhrase(PhraseKey.HELP_EXAMPLE_TITLE.ToString()))
-                .Append(examples);
+                .AppendLine(examples);
+
+            var permissions = command.FindPrecondition<RequireUserPermissionAttribute>();
+
+            if (permissions != null)
+            {
+                if (permissions.GuildPermission
+                    .GetValueOrDefault(0)
+                    .HasFlag(GuildPermission.Administrator))
+                {
+                    _ = content.Append(_lang.GetPhrase(PhraseKey.HELP_REQUIRES_ADMIN.ToString()));
+                }
+            }
 
             return new HelpSection(title, content.ToString());
         }

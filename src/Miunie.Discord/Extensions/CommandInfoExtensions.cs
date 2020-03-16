@@ -26,6 +26,10 @@ namespace Miunie.Discord
             where TAttribute : Attribute
             => command.Attributes.FirstOrDefault(x => x is TAttribute) as TAttribute;
 
+        internal static TPrecondition FindPrecondition<TPrecondition>(this CommandInfo command)
+            where TPrecondition : PreconditionAttribute
+            => command.Preconditions.FirstOrDefault(x => x is TPrecondition) as TPrecondition;
+
         internal static IEnumerable<TAttribute> FindAttributes<TAttribute>(this CommandInfo command)
             where TAttribute : Attribute
             => command.Attributes.Where(x => x is TAttribute).Select(x => x as TAttribute);
