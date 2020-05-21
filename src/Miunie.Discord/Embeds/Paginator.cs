@@ -23,20 +23,64 @@ namespace Miunie.Discord.Embeds
 {
     internal static class Paginator
     {
-        public static IEnumerable<T> GroupAt<T>(IEnumerable<T> set, int index, int pageSize, bool defaultOnOverflow = false)
+        public static IEnumerable<string> GetValues<T>(
+            IEnumerable<T> set,
+            int index,
+            int pageSize,
+            string defaultOnUnderflow = null)
+        {
+            var strings = set.Select(x => x.ToString()).ToList();
+
+            if (defaultOnUnderflow != null && GetValueCountAtPage(set.Count(), pageSize, index) != pageSize)
+            {
+                for (int i = strings.Count(); i < pageSize; i++)
+                {
+                    strings.Add(defaultOnUnderflow);
+                }
+            }
+
+            return GroupAt(strings, index, pageSize);
+        }
+
+        public static IEnumerable<string> GetValues<T>(
+            IEnumerable<T> set,
+            int index,
+            int pageSize,
+            Func<T, string> writer,
+            string defaultOnUnderflow = null)
+        {
+            var strings = set.Select(x => writer.Invoke(x)).ToList();
+
+            if (defaultOnUnderflow != null && GetValueCountAtPage(set.Count(), pageSize, index) != pageSize)
+            {
+                for (int i = strings.Count(); i < pageSize; i++)
+                {
+                    strings.Add(defaultOnUnderflow);
+                }
+            }
+
+            return GroupAt(strings, index, pageSize);
+        }
+
+        public static IEnumerable<T> GroupAt<T>(
+            IEnumerable<T> set,
+            int index,
+            int pageSize,
+            bool defaultOnUnderflow = false)
         {
             int maxPages = GetPageCount(set.Count(), pageSize);
+
             if (index < 0 || index >= maxPages)
             {
                 return set;
             }
 
-            var remainder = set.Skip(pageSize * (index - 1));
+            var remainder = set.Skip(pageSize * index);
+            var group = new List<T>();
 
-            List<T> group = new List<T>();
             for (int i = 0; i < pageSize; i++)
             {
-                if (defaultOnOverflow)
+                if (defaultOnUnderflow)
                 {
                     group.Add(remainder.ElementAtOrDefault(i));
                 }
@@ -56,52 +100,148 @@ namespace Miunie.Discord.Embeds
             return group;
         }
 
-        public static EmbedBuilder PaginateEmbed<T>(IEnumerable<T> set, EmbedBuilder embed, int index, int pageSize)
+        public static EmbedBuilder PaginateEmbedWithFields<T>(
+            IEnumerable<T> set,
+            EmbedBuilder embed,
+            int index,
+            int pageSize,
+            Func<T, (string, string)> writer,
+            PaginatorFooterHandling footerHandling = PaginatorFooterHandling.Auto)
         {
-            return embed.WithDescription(Paginate(set, index, pageSize))
-                .WithFooter($"{(string.IsNullOrWhiteSpace(embed.Footer?.Text) ? string.Empty : $"{embed.Footer?.Text} | ")}{GetPageFooter(index, set.Count(), pageSize)}");
-        }
+            if (pageSize > EmbedBuilder.MaxFieldCount)
+            {
+                throw new ArgumentException("The specified field count is larger than 25.");
+            }
 
-        public static EmbedBuilder PaginateEmbed<T>(IEnumerable<T> set, EmbedBuilder embed, int index, int pageSize, Func<T, string> writer)
-        {
-            return embed.WithDescription(Paginate(set, index, pageSize, writer))
-                .WithFooter($"{(string.IsNullOrWhiteSpace(embed.Footer?.Text) ? string.Empty : $"{embed.Footer?.Text} | ")}{GetPageFooter(index, set.Count(), pageSize)}");
-        }
-
-        public static string Paginate<T>(IEnumerable<T> set, int index, int pageSize)
-        {
             var group = GroupAt(set, index, pageSize);
+            var fields = new List<EmbedFieldBuilder>();
+
+            for (int i = 0; i < pageSize; i++)
+            {
+                var value = group.ElementAtOrDefault(i);
+
+                (string name, string content) = writer.Invoke(value);
+
+                var field = new EmbedFieldBuilder()
+                    .WithName(name)
+                    .WithValue(content)
+                    .WithIsInline(false);
+
+                fields.Add(field);
+            }
+
+            if (CanCreateFooter(set.Count(), pageSize, footerHandling))
+            {
+                _ = embed.WithFooter(GetPageFooter(index, set.Count(), pageSize, embed.Footer?.Text));
+            }
+
+            embed.Fields = fields;
+
+            return embed;
+        }
+
+        public static EmbedBuilder PaginateEmbed<T>(
+            IEnumerable<T> set,
+            EmbedBuilder embed,
+            int index,
+            int pageSize,
+            PaginatorFooterHandling footerHandling = PaginatorFooterHandling.Auto,
+            string defaultOnUnderflow = null)
+        {
+            if (CanCreateFooter(set.Count(), pageSize, footerHandling))
+            {
+                _ = embed.WithFooter(GetPageFooter(index, set.Count(), pageSize, embed.Footer?.Text));
+            }
+
+            return embed.WithDescription(Paginate(set, index, pageSize, defaultOnUnderflow));
+        }
+
+        public static EmbedBuilder PaginateEmbed<T>(
+            IEnumerable<T> set,
+            EmbedBuilder embed,
+            int index,
+            int pageSize,
+            Func<T, string> writer,
+            PaginatorFooterHandling footerHandling = PaginatorFooterHandling.Auto,
+            string defaultOnUnderflow = null)
+        {
+            if (CanCreateFooter(set.Count(), pageSize, footerHandling))
+            {
+                _ = embed.WithFooter(GetPageFooter(index, set.Count(), pageSize, embed.Footer?.Text));
+            }
+
+            return embed.WithDescription(Paginate(set, index, pageSize, writer, defaultOnUnderflow));
+        }
+
+        public static string Paginate<T>(IEnumerable<T> set, int index, int pageSize, string defaultOnUnderflow = null)
+        {
+            var group = GetValues(set, index, pageSize, defaultOnUnderflow);
             StringBuilder page = new StringBuilder();
 
-            foreach (T item in group)
+            foreach (string item in group)
             {
-                _ = page.AppendLine(item.ToString());
+                _ = page.AppendLine(item);
             }
 
             return page.ToString();
         }
 
-        public static string Paginate<T>(IEnumerable<T> set, int index, int pageSize, Func<T, string> writer)
+        public static string Paginate<T>(
+            IEnumerable<T> set,
+            int index,
+            int pageSize,
+            Func<T, string> writer,
+            string defaultOnUnderflow = null)
         {
-            var group = GroupAt(set, index, pageSize);
+            var group = GetValues(set, index, pageSize, writer, defaultOnUnderflow);
             StringBuilder page = new StringBuilder();
 
-            foreach (T item in group)
+            foreach (string item in group)
             {
-                _ = page.AppendLine(writer.Invoke(item));
+                _ = page.AppendLine(item);
             }
 
             return page.ToString();
         }
 
-        private static string GetPageFooter(int index, int collectionSize, int pageSize)
+        private static bool CanCreateFooter(int collectionSize, int pageSize, PaginatorFooterHandling handling)
+            => handling switch
+            {
+                PaginatorFooterHandling.On => true,
+                PaginatorFooterHandling.Off => false,
+                _ => GetPageCount(collectionSize, pageSize) > 1
+            };
+
+        private static string GetPageFooter(int index, int collectionSize, int pageSize, string preFooter = null)
         {
-            return $"Page {index + 1} of {GetPageCount(collectionSize, pageSize)}";
+            StringBuilder footer = new StringBuilder();
+
+            if (!string.IsNullOrWhiteSpace(preFooter))
+            {
+                _ = footer.Append($"{preFooter} | ");
+            }
+
+            _ = footer.Append($"Page {index + 1} of {GetPageCount(collectionSize, pageSize)}");
+
+            return footer.ToString();
         }
 
         private static int GetPageCount(int collectionSize, int pageSize)
         {
             return (int)Math.Ceiling((double)collectionSize / pageSize);
         }
+
+        private static int GetValueCountAtPage(int collectionSize, int pageSize, int index)
+        {
+            index = Clamp(0, GetPageCount(collectionSize, pageSize) - 1, index);
+            return Clamp(0, pageSize, collectionSize - (pageSize * index));
+        }
+
+        private static int Clamp(int min, int max, int value)
+            => value < min
+            ? min
+            : value > max
+            ? max
+            : value;
     }
 }

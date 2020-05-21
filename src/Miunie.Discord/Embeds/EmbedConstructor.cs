@@ -25,6 +25,7 @@ namespace Miunie.Discord.Embeds
 {
     internal static class EmbedConstructor
     {
+<<<<<<< Updated upstream
         private static readonly int RepLogPageSize = 10;
 
         public static Embed CreateReputationLog(IEnumerable<ReputationEntry> entries, int index, ILanguageProvider lang)
@@ -34,6 +35,40 @@ namespace Miunie.Discord.Embeds
                 new EmbedBuilder()
                 .WithColor(new Color(236, 64, 122))
                 .WithTitle(lang.GetPhrase(PhraseKey.USER_EMBED_REP_LOG_TITLE.ToString())),
+=======
+        private static readonly int _repLogPageSize = 10;
+        private static readonly int _helpSectionPageSize = 20;
+        private static readonly uint _miuniePinkColor = 0xEC407A;
+
+        public static Embed CreateHelpEmbed(HelpResult result, int index = 0)
+        {
+            var embed = new EmbedBuilder().WithColor(_miuniePinkColor);
+
+            if (!string.IsNullOrWhiteSpace(result.Title))
+            {
+                _ = embed.WithTitle(result.Title);
+            }
+
+            _ = Paginator.PaginateEmbedWithFields(
+                    result.Sections,
+                    embed,
+                    index,
+                    _helpSectionPageSize,
+                    x => (x.Title, x.Content));
+
+            return embed.Build();
+        }
+
+        public static Embed CreateReputationLog(IEnumerable<ReputationEntry> entries, int index, ILanguageProvider lang)
+        {
+            var embed = new EmbedBuilder()
+                .WithColor(new Color(_miuniePinkColor))
+                .WithTitle(lang.GetPhrase(PhraseKey.USER_EMBED_REP_LOG_TITLE.ToString()));
+
+            _ = Paginator.PaginateEmbed(
+                entries,
+                embed,
+>>>>>>> Stashed changes
                 index,
                 RepLogPageSize,
                 x => $"{(x.IsFromInvoker ? "**To:**" : "**From:**")} {x.TargetName} (**{FormatReputationType(x.Type)}**) {x.GivenAt:d} at {x.GivenAt:t} UTC");
